@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {
   StatusBar,
   Text,
@@ -6,9 +6,9 @@ import {
   Dimensions,
   TouchableOpacity,
   StyleSheet,
-  Animated,
   TextInput,
   Image,
+  Button,
 } from 'react-native';
 import {Container, Card, CardItem, Icon} from 'native-base';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -20,6 +20,7 @@ import SimpleToast from 'react-native-simple-toast';
 import {useDispatch} from 'react-redux';
 import {setUser} from '../../Redux/reducer/user';
 import Auth from '../../Service/Auth';
+import {AccessToken, LoginManager} from 'react-native-fbsdk';
 
 import {
   GoogleSignin,
@@ -96,7 +97,7 @@ function Login() {
     }
   });
 
-  const googleLogin = async () => {
+  const handleGoogleLogin = async () => {
     try {
       const {idToken} = await GoogleSignin.signIn();
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
@@ -105,6 +106,39 @@ function Login() {
       console.log({error});
     }
   };
+  async function handleFacebookLogin() {
+    try {
+      // Login the User and get his public profile and email id.
+      const result = await LoginManager.logInWithPermissions([
+        'public_profile',
+        'email',
+      ]);
+
+      // If the user cancels the login process, the result will have a
+      // isCancelled boolean set to true. We can use that to break out of this function.
+      if (result.isCancelled) {
+        throw 'User cancelled the login process';
+      }
+
+      // Get the Access Token
+      const data = await AccessToken.getCurrentAccessToken();
+
+      // If we don't get the access token, then something has went wrong.
+      if (!data) {
+        throw 'Something went wrong obtaining access token';
+      }
+
+      // Use the Access Token to create a facebook credential.
+      const facebookCredential = auth.FacebookAuthProvider.credential(
+        data.accessToken,
+      );
+
+      // Use the facebook credential to sign in to the application.
+      return auth().signInWithCredential(facebookCredential);
+    } catch (error) {
+      alert(error);
+    }
+  }
   return (
     <Container>
       <StatusBar
@@ -198,7 +232,13 @@ function Login() {
                 style={{width: 192, height: 48}}
                 size={GoogleSigninButton.Size.Wide}
                 color={GoogleSigninButton.Color.Dark}
-                onPress={() => googleLogin()}
+                onPress={handleGoogleLogin}
+              />
+
+              <Button
+                onPress={handleFacebookLogin}
+                title="Continue with fb"
+                color="#4267B2"
               />
 
               <View style={styles.contactView}>
